@@ -1,7 +1,25 @@
 {
-  "name": "vite-project",
+  "name": "cube-solver",
   "private": true,
   "version": "0.0.0",
+  "description": "A browser-based 3D Rubik's Cube solver with 2D color input, Kociemba solving, mobile support, and PWA installation.",
+  "homepage": "https://1708293266.github.io/cube---solver/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1708293266/cube---solver.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "rubiks-cube",
+    "cube-solver",
+    "kociemba",
+    "threejs",
+    "react",
+    "typescript",
+    "vite",
+    "pwa",
+    "github-pages"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
