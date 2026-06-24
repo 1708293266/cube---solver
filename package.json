@@ -1,6 +1,5 @@
 {
   "name": "cube-solver",
-  "private": true,
   "version": "0.0.0",
   "description": "A browser-based 3D Rubik's Cube solver with 2D color input, Kociemba solving, mobile support, and PWA installation.",
   "homepage": "https://1708293266.github.io/cube---solver/",
