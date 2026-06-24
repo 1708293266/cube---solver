@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>魔方求解器 - Canvas 2D 版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    color: #fff;
+    overflow-x: hidden;
+  }
+  .container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 24px;
+    margin: 12px 0 8px;
+    background: linear-gradient(90deg, #e94560, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 16px;
+  }
+  .canvas-wrapper {
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  canvas {
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
+  }
+  .btn-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px 8px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-scramble {
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    color: #fff;
+  }
+  .btn-solve {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: #fff;
+  }
+  .btn-reset {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .manual-controls {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .manual-title {
+    font-size: 14px;
+    color: #aaa;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .face-btns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .face-btn-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .face-label {
+    font-size: 11px;
+    color: #666;
+  }
+  .face-btn-row {
+    display: flex;
+    gap: 4px;
+  }
+  .face-btn {
+    width: 44px;
+    height: 36px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .face-btn:active {
+    background: rgba(255,255,255,0.25);
+  }
+  .status-bar {
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    color: #aaa;
+    min-height: 40px;
+  }
+  .status-bar.solved { color: #00b894; }
+  .status-bar.scrambling { color: #e94560; }
+  .status-bar.solving { color: #00cec9; }
+  .steps-panel {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px;
+    max-height: 150px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+  .steps-title {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .step-item {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: monospace;
+    font-weight: 600;
+  }
+  .step-done { background: rgba(0,184,148,0.2); color: #00b894; }
+  .step-current { background: rgba(0,206,201,0.3); color: #00cec9; border: 1px solid #00cec9; }
+  .step-pending { background: rgba(255,255,255,0.1); color: #666; }
+  .legend {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎲 魔方求解器</h1>
+  <p class="subtitle">纯 Canvas 2D 实现 · 无需外部依赖 · 兼容所有浏览器</p>
+  
+  <div class="canvas-wrapper">
+    <canvas id="cubeCanvas" width="360" height="420"></canvas>
+  </div>
+  
+  <div class="btn-group">
+    <button class="btn btn-scramble" id="btnScramble" onclick="scrambleCube()">
+      🎲 打乱
+    </button>
+    <button class="btn btn-solve" id="btnSolve" onclick="solveCube()">
+      ✨ 求解
+    </button>
+    <button class="btn btn-reset" id="btnReset" onclick="resetCube()">
+      🔄 重置
+    </button>
+  </div>
+  
+  <div class="manual-controls">
+    <div class="manual-title">手动旋转层</div>
+    <div class="face-btns">
+      <div class="face-btn-group">
+        <span class="face-label">上 (U)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('U')">U</button>
+          <button class="face-btn" onclick="manualMove("U'")">U'</button>
+        </div>
+      </div>
+      <div class="face-btn-group">
+        <span class="face-label">下 (D)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('D')">D</button>
+          <button class="face-btn" onclick="manualMove("D'")">D'</button>
+        </div>
+      </div>
+      <div class="face-btn-group">
+        <span class="face-label">前 (F)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('F')">F</button>
+          <button class="face-btn" onclick="manualMove("F'")">F'</button>
+        </div>
+      </div>
+      <div class="face-btn-group">
+        <span class="face-label">后 (B)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('B')">B</button>
+          <button class="face-btn" onclick="manualMove("B'")">B'</button>
+        </div>
+      </div>
+      <div class="face-btn-group">
+        <span class="face-label">左 (L)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('L')">L</button>
+          <button class="face-btn" onclick="manualMove("L'")">L'</button>
+        </div>
+      </div>
+      <div class="face-btn-group">
+        <span class="face-label">右 (R)</span>
+        <div class="face-btn-row">
+          <button class="face-btn" onclick="manualMove('R')">R</button>
+          <button class="face-btn" onclick="manualMove("R'")">R'</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="status-bar" id="statusBar">点击"打乱"开始</div>
+  
+  <div class="steps-panel" id="stepsPanel" style="display:none;">
+    <div class="steps-title">求解步骤</div>
+    <div id="stepsList"></div>
+  </div>
+  
+  <div class="legend">
+    U=上 D=下 F=前 B=后 L=左 R=右 | 加 ' 表示逆时针
+  </div>
+</div>
+
+<script>
+// 魔方状态管理
+const FACES = ['U', 'D', 'F', 'B', 'L', 'R'];
+const COLORS = {
+  U: '#FFFFFF', D: '#FFD500', F: '#009E60',
+  B: '#0051BA', L: '#FF5800', R: '#C41E3A'
+};
+const FACE_NAMES = { U: '上', D: '下', F: '前', B: '后', L: '左', R: '右' };
+
+let cube = {};
+let moveHistory = [];
+let isAnimating = false;
+let solveSteps = [];
+let currentStep = 0;
+
+function initCube() {
+  FACES.forEach(f => {
+    cube[f] = Array(9).fill(COLORS[f]);
+  });
+  moveHistory = [];
+  solveSteps = [];
+  currentStep = 0;
+  updateStatus('点击"打乱"开始', '');
+  document.getElementById('stepsPanel').style.display = 'none';
+}
+
+function cloneCube() {
+  const c = {};
+  FACES.forEach(f => c[f] = [...cube[f]]);
+  return c;
+}
+
+function rotateFaceCW(face) {
+  const f = [...cube[face]];
+  cube[face] = [f[6], f[3], f[0], f[7], f[4], f[1], f[8], f[5], f[2]];
+}
+
+function rotateFaceCCW(face) {
+  const f = [...cube[face]];
+  cube[face] = [f[2], f[5], f[8], f[1], f[4], f[7], f[0], f[3], f[6]];
+}
+
+function applyMove(notation) {
+  const face = notation[0];
+  const isCCW = notation.includes("'");
+  const isDouble = notation.includes('2');
+  const times = isDouble ? 2 : 1;
+  
+  for (let t = 0; t < times; t++) {
+    if (isDouble || !isCCW) {
+      rotateFaceCW(face);
+    } else {
+      rotateFaceCCW(face);
+    }
+    
+    // 交换相邻面的色块
+    const temp = [...cube[face]];
+    switch(face) {
+      case 'U':
+        if (isCCW) {
+          swapStrips(['F','R','B','L'], [0,1,2], 1);
+        } else {
+          swapStrips(['F','R','B','L'], [0,1,2], -1);
+        }
+        break;
+      case 'D':
+        if (isCCW) {
+          swapStrips(['F','L','B','R'], [6,7,8], 1);
+        } else {
+          swapStrips(['F','L','B','R'], [6,7,8], -1);
+        }
+        break;
+      case 'F':
+        if (isCCW) {
+          swapStripsCustom([
+            {face:'U', idx:[6,7,8]},
+            {face:'R', idx:[0,3,6]},
+            {face:'D', idx:[2,1,0]},
+            {face:'L', idx:[8,5,2]}
+          ], 1);
+        } else {
+          swapStripsCustom([
+            {face:'U', idx:[6,7,8]},
+            {face:'R', idx:[0,3,6]},
+            {face:'D', idx:[2,1,0]},
+            {face:'L', idx:[8,5,2]}
+          ], -1);
+        }
+        break;
+      case 'B':
+        if (isCCW) {
+          swapStripsCustom([
+            {face:'U', idx:[2,1,0]},
+            {face:'L', idx:[0,3,6]},
+            {face:'D', idx:[6,7,8]},
+            {face:'R', idx:[8,5,2]}
+          ], 1);
+        } else {
+          swapStripsCustom([
+            {face:'U', idx:[2,1,0]},
+            {face:'L', idx:[0,3,6]},
+            {face:'D', idx:[6,7,8]},
+            {face:'R', idx:[8,5,2]}
+          ], -1);
+        }
+        break;
+      case 'L':
+        if (isCCW) {
+          swapStripsCustom([
+            {face:'U', idx:[0,3,6]},
+            {face:'B', idx:[8,5,2]},
+            {face:'D', idx:[0,3,6]},
+            {face:'F', idx:[0,3,6]}
+          ], 1);
+        } else {
+          swapStripsCustom([
+            {face:'U', idx:[0,3,6]},
+            {face:'B', idx:[8,5,2]},
+            {face:'D', idx:[0,3,6]},
+            {face:'F', idx:[0,3,6]}
+          ], -1);
+        }
+        break;
+      case 'R':
+        if (isCCW) {
+          swapStripsCustom([
+            {face:'U', idx:[8,5,2]},
+            {face:'F', idx:[8,5,2]},
+            {face:'D', idx:[8,5,2]},
+            {face:'B', idx:[0,3,6]}
+          ], 1);
+        } else {
+          swapStripsCustom([
+            {face:'U', idx:[8,5,2]},
+            {face:'F', idx:[8,5,2]},
+            {face:'D', idx:[8,5,2]},
+            {face:'B', idx:[0,3,6]}
+          ], -1);
+        }
+        break;
+    }
+  }
+}
+
+function swapStrips(faces, indices, direction) {
+  for (let i = 0; i < 3; i++) {
+    const vals = faces.map(f => cube[f][indices[i]]);
+    if (direction === 1) {
+      for (let j = 0; j < 4; j++) {
+        cube[faces[j]][indices[i]] = vals[(j + 3) % 4];
+      }
+    } else {
+      for (let j = 0; j < 4; j++) {
+        cube[faces[j]][indices[i]] = vals[(j + 1) % 4];
+      }
+    }
+  }
+}
+
+function swapStripsCustom(strips, direction) {
+  for (let i = 0; i < 3; i++) {
+    const vals = strips.map(s => cube[s.face][s.idx[i]]);
+    if (direction === 1) {
+      for (let j = 0; j < 4; j++) {
+        cube[strips[j].face][strips[j].idx[i]] = vals[(j + 3) % 4];
+      }
+    } else {
+      for (let j = 0; j < 4; j++) {
+        cube[strips[j].face][strips[j].idx[i]] = vals[(j + 1) % 4];
+      }
+    }
+  }
+}
+
+function generateScramble(length = 20) {
+  const moves = [];
+  let last = '';
+  let secondLast = '';
+  const opposites = {U:'D', D:'U', F:'B', B:'F', L:'R', R:'L'};
+  
+  for (let i = 0; i < length; i++) {
+    let face;
+    do {
+      face = FACES[Math.floor(Math.random() * 6)];
+    } while (face === last || (face === secondLast && opposites[face] === last));
+    
+    const mod = ['', "'", '2'][Math.floor(Math.random() * 3)];
+    moves.push(face + mod);
+    secondLast = last;
+    last = face;
+  }
+  return moves;
+}
+
+function invertMove(notation) {
+  if (notation.includes('2')) return notation;
+  if (notation.includes("'")) return notation.replace("'", "");
+  return notation + "'";
+}
+
+// Canvas 渲染
+const canvas = document.getElementById('cubeCanvas');
+const ctx = canvas.getContext('2d');
+
+function drawCube() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const cellSize = 36;
+  const gap = 2;
+  const faceSize = cellSize * 3 + gap * 2;
+  const offsetX = 30;
+  const offsetY = 20;
+  
+  // 定义面的位置（展开图布局）
+  const facePositions = {
+    U: { x: offsetX + faceSize, y: offsetY },
+    L: { x: offsetX, y: offsetY + faceSize },
+    F: { x: offsetX + faceSize, y: offsetY + faceSize },
+    R: { x: offsetX + faceSize * 2, y: offsetY + faceSize },
+    B: { x: offsetX + faceSize * 3, y: offsetY + faceSize },
+    D: { x: offsetX + faceSize, y: offsetY + faceSize * 2 }
+  };
+  
+  FACES.forEach(face => {
+    const pos = facePositions[face];
+    if (!pos) return;
+    
+    // 绘制面背景
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(pos.x - 4, pos.y - 4, faceSize + 8, faceSize + 8);
+    
+    // 绘制面标签
+    ctx.fillStyle = '#888';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${FACE_NAMES[face]} (${face})`, pos.x + faceSize/2, pos.y - 8);
+    
+    // 绘制 3x3 色块
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        const idx = row * 3 + col;
+        const x = pos.x + col * (cellSize + gap);
+        const y = pos.y + row * (cellSize + gap);
+        
+        // 色块
+        ctx.fillStyle = cube[face][idx];
+        ctx.beginPath();
+        roundRect(ctx, x, y, cellSize, cellSize, 4);
+        ctx.fill();
+        
+        // 边框
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        roundRect(ctx, x, y, cellSize, cellSize, 4);
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function updateStatus(text, className) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = text;
+  bar.className = 'status-bar ' + (className || '');
+}
+
+function updateStepsDisplay() {
+  const panel = document.getElementById('stepsPanel');
+  const list = document.getElementById('stepsList');
+  
+  if (solveSteps.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  
+  panel.style.display = 'block';
+  list.innerHTML = '';
+  
+  solveSteps.forEach((step, i) => {
+    const span = document.createElement('span');
+    span.className = 'step-item ';
+    if (i < currentStep) span.className += 'step-done';
+    else if (i === currentStep) span.className += 'step-current';
+    else span.className += 'step-pending';
+    span.textContent = step;
+    list.appendChild(span);
+  });
+}
+
+// 操作函数
+async function scrambleCube() {
+  if (isAnimating) return;
+  isAnimating = true;
+  
+  const moves = generateScramble(20);
+  solveSteps = [];
+  currentStep = 0;
+  moveHistory = [];
+  updateStatus('正在打乱...', 'scrambling');
+  document.getElementById('stepsPanel').style.display = 'none';
+  
+  for (let i = 0; i < moves.length; i++) {
+    applyMove(moves[i]);
+    moveHistory.push(moves[i]);
+    drawCube();
+    await sleep(80);
+  }
+  
+  isAnimating = false;
+  updateStatus(`打乱完成！共 ${moves.length} 步`, '');
+}
+
+async function solveCube() {
+  if (isAnimating || moveHistory.length === 0) return;
+  isAnimating = true;
+  
+  solveSteps = moveHistory.slice().reverse().map(invertMove);
+  currentStep = 0;
+  updateStatus('正在求解...', 'solving');
+  updateStepsDisplay();
+  
+  for (let i = 0; i < solveSteps.length; i++) {
+    applyMove(solveSteps[i]);
+    currentStep = i + 1;
+    drawCube();
+    updateStepsDisplay();
+    await sleep(120);
+  }
+  
+  isAnimating = false;
+  moveHistory = [];
+  solveSteps = [];
+  currentStep = 0;
+  document.getElementById('stepsPanel').style.display = 'none';
+  updateStatus('✅ 魔方已还原！', 'solved');
+}
+
+function resetCube() {
+  if (isAnimating) return;
+  initCube();
+  drawCube();
+}
+
+async function manualMove(notation) {
+  if (isAnimating) return;
+  isAnimating = true;
+  
+  applyMove(notation);
+  moveHistory.push(notation);
+  drawCube();
+  
+  await sleep(100);
+  isAnimating = false;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 初始化
+initCube();
+drawCube();
+</script>
+</body>
+</html>
