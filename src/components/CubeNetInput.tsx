@@ -23,6 +23,14 @@ const COLOR_LABELS: Record<ColorName, string> = {
   blue: '蓝',
   green: '绿',
 };
+const FACE_CENTER_COLORS: Record<FaceName, ColorName> = {
+  U: 'yellow',
+  D: 'white',
+  F: 'green',
+  B: 'blue',
+  L: 'red',
+  R: 'orange',
+};
 
 // Cross layout positions: [row, col] in a 5x4 grid
 // Row 0: empty, U, empty, empty
@@ -39,18 +47,19 @@ const FACE_GRID_POSITION: Record<FaceName, [number, number]> = {
 
 function createDefaultNet(): Record<FaceName, ColorName[]> {
   const net: Record<FaceName, ColorName[]> = {} as Record<FaceName, ColorName[]>;
-  const defaultColors: Record<FaceName, ColorName> = {
-    U: 'yellow',
-    D: 'white',
-    F: 'green',
-    B: 'blue',
-    L: 'red',
-    R: 'orange',
-  };
   for (const face of FACE_ORDER) {
-    net[face] = Array(9).fill(defaultColors[face]);
+    net[face] = Array(9).fill(FACE_CENTER_COLORS[face]);
   }
   return net;
+}
+
+function lockCenterStickers(net: Record<FaceName, ColorName[]>): Record<FaceName, ColorName[]> {
+  const lockedNet = {} as Record<FaceName, ColorName[]>;
+  for (const face of FACE_ORDER) {
+    lockedNet[face] = [...net[face]];
+    lockedNet[face][4] = FACE_CENTER_COLORS[face];
+  }
+  return lockedNet;
 }
 
 interface CubeNetInputProps {
@@ -63,14 +72,14 @@ interface CubeNetInputProps {
 export default function CubeNetInput({ open, onOpenChange, onComplete, initialCubeState }: CubeNetInputProps) {
   const [net, setNet] = useState<Record<FaceName, ColorName[]>>(() => {
     if (initialCubeState) {
-      return {
+      return lockCenterStickers({
         U: [...initialCubeState.faces.U],
         D: [...initialCubeState.faces.D],
         F: [...initialCubeState.faces.F],
         B: [...initialCubeState.faces.B],
         L: [...initialCubeState.faces.L],
         R: [...initialCubeState.faces.R],
-      };
+      });
     }
     return createDefaultNet();
   });
@@ -113,14 +122,14 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
           ];
         };
         // 严格遵循：D' -> U, U' -> D, D2 -> U2, U2 -> D2 的全指令回显
-        setNet({
+        setNet(lockCenterStickers({
           U: revertSide(initialCubeState.faces.U),
           D: revertSide(initialCubeState.faces.D),
           F: revertSide(initialCubeState.faces.F),
           B: revertSide(initialCubeState.faces.B),
           L: revertSide(initialCubeState.faces.L),
           R: revertSide(initialCubeState.faces.R),
-        });
+        }));
         } else {
         setNet(createDefaultNet());
         }
@@ -142,6 +151,7 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
   }, [selectedSticker]);
 
   const handleStickerClick = useCallback((face: FaceName, index: number) => {
+    if (index === 4) return;
     setSelectedSticker(prev =>
       prev?.face === face && prev?.index === index ? null : { face, index },
     );
@@ -149,6 +159,10 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
 
   const handleColorSelect = useCallback((color: ColorName) => {
     if (!selectedSticker) return;
+    if (selectedSticker.index === 4) {
+      setSelectedSticker(null);
+      return;
+    }
     setNet(prev => {
       const newNet = { ...prev };
       newNet[selectedSticker.face] = [...prev[selectedSticker.face]];
@@ -159,11 +173,12 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
   }, [selectedSticker]);
 
   const validateNet = useCallback((): string | null => {
+    const lockedNet = lockCenterStickers(net);
     const counts: Record<ColorName, number> = {
       white: 0, yellow: 0, red: 0, orange: 0, blue: 0, green: 0,
     };
     for (const face of FACE_ORDER) {
-      for (const color of net[face]) {
+      for (const color of lockedNet[face]) {
         counts[color]++;
       }
     }
@@ -176,6 +191,7 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
   }, [net]);
 
   const handleComplete = useCallback(() => {
+    const lockedNet = lockCenterStickers(net);
     const error = validateNet();
     if (error) {
       setValidationError(error);
@@ -188,7 +204,7 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
       
       // 1. 如果是 U 面：在回显时顺时针转了，那么用户点击完成导出时，需要逆时针转回去
       // 标准逆时针为：[2,5,8, 1,4,7, 0,3,6]
-      if (net.U && arr === net.U) {
+      if (lockedNet.U && arr === lockedNet.U) {
         return [
         arr[0], arr[1], arr[2],
         arr[3], arr[4], arr[5],
@@ -209,12 +225,12 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
   
     const cubeState: CubeState = {
       faces: {
-        D: convertSide(net.D || Array(9).fill('white')),
-        U: convertSide(net.U || Array(9).fill('yellow')),
-        F: convertSide(net.F || Array(9).fill('green')),
-        B: convertSide(net.B || Array(9).fill('blue')),
-        L: convertSide(net.L || Array(9).fill('red')),
-        R: convertSide(net.R || Array(9).fill('orange')),
+        D: convertSide(lockedNet.D || Array(9).fill('white')),
+        U: convertSide(lockedNet.U || Array(9).fill('yellow')),
+        F: convertSide(lockedNet.F || Array(9).fill('green')),
+        B: convertSide(lockedNet.B || Array(9).fill('blue')),
+        L: convertSide(lockedNet.L || Array(9).fill('red')),
+        R: convertSide(lockedNet.R || Array(9).fill('orange')),
       },
     };
     
@@ -248,12 +264,22 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
         <div className="grid grid-cols-3 gap-0.5 bg-slate-800 p-0.5 rounded">
           {net[face].map((color, idx) => {
             const isSelected = selectedSticker?.face === face && selectedSticker?.index === idx;
+            const isCenterSticker = idx === 4;
             return (
               <button
                 key={idx}
+                type="button"
+                disabled={isCenterSticker}
+                aria-label={`${FACE_LABELS[face]} ${isCenterSticker ? '固定中心块' : `第 ${idx + 1} 个色块`}`}
+                title={isCenterSticker ? '中心块固定，不能编辑' : '点击选择颜色'}
                 className={cn(
-                  'w-8 h-8 rounded-sm border transition-all duration-100 hover:brightness-110',
-                  isSelected ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900 scale-110 z-10' : 'border-slate-700',
+                  'w-8 h-8 rounded-sm border transition-all duration-100',
+                  isCenterSticker
+                    ? 'cursor-not-allowed border-white/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]'
+                    : 'hover:brightness-110',
+                  isSelected
+                    ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900 scale-110 z-10'
+                    : !isCenterSticker && 'border-slate-700',
                 )}
                 style={{ backgroundColor: COLOR_HEX_MAP[color] }}
                 onClick={() => handleStickerClick(face, idx)}
@@ -361,7 +387,7 @@ export default function CubeNetInput({ open, onOpenChange, onComplete, initialCu
           </div>
 
           <p className="text-slate-500 text-xs text-center max-w-md">
-            点击色块选择颜色，确保每种颜色恰好出现 9 次
+            点击色块选择颜色，中心块已固定，确保每种颜色恰好出现 9 次
           </p>
         </div>
       </DialogContent>

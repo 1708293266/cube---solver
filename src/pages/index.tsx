@@ -224,7 +224,10 @@ export default function RubiksCubePage() {
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white text-lg">3D 魔方</CardTitle>
+                  <CardTitle className="text-white text-lg">
+                    3D 魔方
+                    <span className="ml-2 text-sm font-normal text-slate-400">（绿色为正面，黄色为上面）</span>
+                  </CardTitle>
                   <div className="flex gap-2">
                     {isSolved(cubeState) && (
                       <Badge className="bg-green-500/20 text-green-400 border-green-500/30">已还原</Badge>
