@@ -50,33 +50,6 @@ A browser-based 3D Rubik cube solver built with React, Three.js and the Kociemba
 
 Live demo: [https://1708293266.github.io/cube---solver/](https://1708293266.github.io/cube---solver/)
 
-## 本地运行
-
-```bash
-npm install
-npm run dev
-```
-
-## 构建
-
-```bash
-npm run build
-```
-
-构建产物会生成到 `dist` 目录。
-
-## 部署
-
-本仓库已经包含 GitHub Actions 部署配置。推送到 `main` 分支后，会自动构建并发布到 GitHub Pages：
-
-[https://1708293266.github.io/cube---solver/](https://1708293266.github.io/cube---solver/)
-
-如果仓库名不是 `cube---solver`，请修改 `.github/workflows/pages.yml` 里的 `VITE_BASE`：
-
-```yaml
-VITE_BASE: /你的仓库名/
-```
-
 ## 开源协议
 
 MIT
